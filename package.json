@@ -18,5 +18,9 @@
     "fastareader": ">=0.1.1",
     "sortedlist": ">=0.0.1"
   },
+  "bin": {
+    "splay" : "./splay.js",
+    "sp2fa" : "./sp2fa.js"
+  },
   "devDependencies": {}
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var fs    = require("fs");
 var cl    = require("termcolor").define();
 var LS    = require("linestream");
@@ -15,6 +16,10 @@ const SELFTERM_FLAG = 0x10;  // same splicing ID with terminate signal
 // function for flag checking
 function has(flag, val) {
   return !! (flag & val);
+}
+
+function nsort(a, b) {
+  return Number(a) > Number(b) ? 1: -1;
 }
 
 /**
@@ -98,8 +103,11 @@ function main() {
   .using("convertedFile")
   .eshift();
 
+
+
   $j("check", function(exons, groups, rels) {
     this.$.seqs = {};
+    this.$.revs = {};
 
     // for every exon
     this.forEach(exons, function(data, k) {
@@ -122,9 +130,11 @@ function main() {
 
       // for each start splice pattern
       starts.forEach(function(name, k2) {
+
         var id = name + "_" + exonID;
         var resultExons = {};
         var current = k - delta;
+        if (strand == "-") this.$.revs[id] = true;
 
         // get exons
         while (true) {
@@ -204,28 +214,34 @@ function main() {
 
     // for each sequences
     Object.keys(this.$.seqs).forEach(function(id) {
+      var rev = !!this.$.revs[id];
       var exs = this.$.seqs[id];
       var k = 0;
 
+      var showLines = [];
+      var method = rev ? "unshift" : "push";
       // for each exons in the sequence until termination
-      Object.keys(exs).every(function(exon_num) {
+      var nums = Object.keys(exs).sort(nsort);
+      if (rev) nums = nums.reverse();
+      nums.every(function(exon_num) {
         var flag = exs[exon_num];
 
         // known relation
         if (has(flag, KNOWNSET_FLAG)) {
-          // console.eblue("known relation, skipped", exon_num);
+          // console.eyellow("known relation", id, exon_num);
           return true;
         }
 
         // same group nonself exon
         if (has(flag, GROUP_FLAG) && !has(flag, SELF_FLAG)) {
-          // console.eblue("same group, skipped", exon_num);
+          // console.eyellow("same group", id, exon_num);
           return true;
         }
 
         // here remains UNKNOWN RELS or SELF. display it.
         var exon = exons[exon_num];
-        console.log(exon.slice(0,5).concat([id, ++k, flag]).join("\t"));
+        var val = exon.slice(0,5).concat([id, ++k, flag]).join("\t");
+        showLines[method](val);
 
         // if termination
         if (has(flag, SELFTERM_FLAG) || ( has(flag, TERM_FLAG) && !has(flag, SELF_FLAG))) {
@@ -233,6 +249,9 @@ function main() {
         }
         return true;
       }, this);
+      showLines.forEach(function(line) {
+        console.log(line);
+      });
     }, this);
 
     console.egreen("finished");
@@ -247,8 +266,8 @@ function getExonInfo(filename, callback) {
   var groups = {};
   var rels = {};
 
-  var ex2gr = spawn("node", ["exon2groups.js", filename]);
-  var ex2rl = spawn("node", ["exon2rels.js", filename]);
+  var ex2gr = spawn("node", [__dirname + "/exon2groups.js", filename]);
+  var ex2rl = spawn("node", [__dirname + "/exon2rels.js", filename]);
 
   ex2gr.stdout.setEncoding("utf8");
   ex2rl.stdout.setEncoding("utf8");
@@ -294,5 +313,4 @@ function getExonInfo(filename, callback) {
 
 
 
-
-if (process.argv[1] === __filename) { main(); }
+if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)(\.js)?$')[1]) main();

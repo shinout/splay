@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 var dna         = require("dna");
 var FASTAReader = require("fastareader");
 var SortedList = require("sortedlist");
@@ -132,4 +133,4 @@ function main() {
 }
 
 
-if (__filename == process.argv[1]) { main(); }
+if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)(\.js)?$')[1]) main();
